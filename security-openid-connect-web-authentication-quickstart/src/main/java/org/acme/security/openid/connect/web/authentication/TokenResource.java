@@ -1,16 +1,16 @@
 package org.acme.security.openid.connect.web.authentication;
 
+import io.quarkus.oidc.AccessTokenCredential;
+import io.quarkus.oidc.IdToken;
+import io.quarkus.oidc.RefreshToken;
+import org.eclipse.microprofile.jwt.JsonWebToken;
+
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
-import org.eclipse.microprofile.jwt.JsonWebToken;
-
-import io.quarkus.oidc.IdToken;
-import io.quarkus.oidc.RefreshToken;
-
-@Path("/tokens")
+@Path("/")
 public class TokenResource {
 
     /**
@@ -27,6 +27,12 @@ public class TokenResource {
     JsonWebToken accessToken;
 
     /**
+     * Injection point for the Access Token issued by the OpenID Connect Provider
+     */
+    @Inject
+    AccessTokenCredential accessTokenCredential;
+
+    /**
      * Injection point for the Refresh Token issued by the OpenID Connect Provider
      */
     @Inject
@@ -41,23 +47,41 @@ public class TokenResource {
     @GET
     @Produces("text/html")
     public String getTokens() {
-        StringBuilder response = new StringBuilder().append("<html>")
-                .append("<body>")
-                .append("<ul>");
+        StringBuilder response = new StringBuilder().append("<html>").append("<body>").append("<ul>");
 
         Object userName = this.idToken.getClaim("preferred_username");
 
         if (userName != null) {
-            response.append("<li>username: ").append(userName.toString()).append("</li>");
+            response.append("<li>username: ").append(userName).append("</li>");
         }
 
-        Object scopes = this.accessToken.getClaim("scope");
-
-        if (scopes != null) {
-            response.append("<li>scopes: ").append(scopes.toString()).append("</li>");
+        response.append("<ul>");
+        for (String claimName : idToken.getClaimNames()) {
+            response.append("<li>").append(claimName).append(": ").append(idToken.getClaim(claimName).toString()).append("</li>");
         }
+        response.append("</ul>");
+
+        response.append("<br/>");
+        response.append("<ul>");
+        for (String group : idToken.getGroups()) {
+            response.append("<li>").append(group).append("</li>");
+        }
+        response.append("</ul>");
+
+        response.append("access token ").append(accessTokenCredential.getToken());
+        response.append("<br/>");
+
+//        response.append("access token ").append(accessToken.toString());
+//        response.append("<br/>");
+//
+//        Object scopes = this.accessToken.getClaim("scope");
+//        if (scopes != null) {
+//            response.append("<li>scopes: ").append(scopes.toString()).append("</li>");
+//        }
 
         response.append("<li>refresh_token: ").append(refreshToken.getToken() != null).append("</li>");
+        response.append("refresh token ").append(refreshToken.getToken());
+        response.append("<br/>");
 
         return response.append("</ul>").append("</body>").append("</html>").toString();
     }
